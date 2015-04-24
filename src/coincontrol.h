@@ -14,6 +14,7 @@ public:
     CTxDestination destChange;
     //! If false, allows unselected inputs, but requires all selected inputs be used
     bool fAllowOtherInputs;
+    bool fAllowWatchOnly;
 
     CCoinControl()
     {
@@ -24,6 +25,7 @@ public:
     {
         destChange = CNoDestination();
         fAllowOtherInputs = false;
+        fAllowWatchOnly = false;
         setSelected.clear();
     }
 

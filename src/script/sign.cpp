@@ -275,3 +275,27 @@ CScript CombineSignatures(const CScript& scriptPubKey, const BaseSignatureChecke
 
     return CombineSignatures(scriptPubKey, checker, txType, vSolutions, stack1, stack2);
 }
+
+namespace {
+/** Dummy signature checker which accepts all signatures. */
+class DummySignatureChecker : public BaseSignatureChecker
+{
+public:
+    bool CheckSig(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode) const
+    {
+        return true;
+    }
+};
+const DummySignatureChecker dummyChecker;
+}
+
+const BaseSignatureChecker& DummySignatureCreator::Checker() const
+{
+    return dummyChecker;
+}
+
+bool DummySignatureCreator::CreateSig(std::vector<unsigned char>& vchSig, const CKeyID& keyid, const CScript& scriptCode) const
+{
+    vchSig.assign(72, '\000');
+    return true;
+}

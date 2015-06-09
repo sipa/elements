@@ -16,6 +16,7 @@ fi
 #Run the tests
 
 testScripts=(
+    'rawtransactions.py'
     'wallet.py'
     'listtransactions.py'
     'mempool_resurrect_test.py'
@@ -29,7 +30,6 @@ testScripts=(
     'zapwallettxes.py'
     'proxy_test.py'
     'merkle_blocks.py'
-    'rawtransactions.py'
 #    'forknotify.py'
     'maxblocksinflight.py'
     'invalidblockrequest.py'

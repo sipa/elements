@@ -421,7 +421,7 @@ Value listunspent(const Array& params, bool fHelp)
         if (ExtractDestination(out.tx->vout[out.i].scriptPubKey, address)) {
             CBitcoinAddress addr(address);
             if (out.tx->GetBlindingFactor(out.i).size() > 0) {
-                addr.AddBlindingKey(pwalletMain->blinding_pubkey);
+                addr.AddBlindingKey(pwalletMain->GetBlindingPubKey(pk));
             }
             entry.push_back(Pair("address", addr.ToString()));
             if (pwalletMain->mapAddressBook.count(address))

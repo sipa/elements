@@ -193,9 +193,9 @@ bool CWalletDB::WriteAccountingEntry(const CAccountingEntry& acentry)
     return WriteAccountingEntry(++nAccountingEntryNumber, acentry);
 }
 
-bool CWalletDB::WriteBlindingKey(const CKey& privKey)
+bool CWalletDB::WriteBlindingDerivationKey(const CKey& privKey)
 {
-    return Write(std::string("blindingkey"), std::vector<unsigned char>(privKey.begin(), privKey.end()));
+    return Write(std::string("blindingderivationkey"), std::vector<unsigned char>(privKey.begin(), privKey.end()));
 }
 
 CAmount CWalletDB::GetAccountCreditDebit(const string& strAccount)
@@ -595,14 +595,27 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
                 return false;
             }
         }
+        /* Only for backward compatibility with older wallets. */
         else if (strType == "blindingkey")
         {
             assert(!pwallet->blinding_key.IsValid());
             std::vector<unsigned char> vchBlindingKey;
             ssValue >> vchBlindingKey;
             pwallet->blinding_key.Set(vchBlindingKey.begin(), vchBlindingKey.end(), true);
-            if (pwallet->blinding_key.IsValid()) {
-                pwallet->blinding_pubkey = pwallet->blinding_key.GetPubKey();
+            if (!pwallet->blinding_key.IsValid()) {
+                strErr = "Error reading wallet blinding key";
+                return false;
+            }
+        }
+        else if (strType == "blindingderivationkey")
+        {
+            assert(!pwallet->blinding_derivation_key.IsValid());
+            std::vector<unsigned char> vchBlindingKey;
+            ssValue >> vchBlindingKey;
+            pwallet->blinding_key.Set(vchBlindingKey.begin(), vchBlindingKey.end(), true);
+            if (!pwallet->blinding_derivation_key.IsValid()) {
+                strErr = "Error reading wallet blinding derivation key";
+                return false;
             }
         }
     } catch (...)
@@ -716,10 +729,9 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
     if (wss.fAnyUnordered)
         result = ReorderTransactions(pwallet);
 
-    if (!pwallet->blinding_key.IsValid()) {
-        pwallet->blinding_key.MakeNewKey(true);
-        pwallet->blinding_pubkey = pwallet->blinding_key.GetPubKey();
-        WriteBlindingKey(pwallet->blinding_key);
+    if (!pwallet->blinding_derivation_key.IsValid()) {
+        pwallet->blinding_derivation_key.MakeNewKey(true);
+        WriteBlindingDerivationKey(pwallet->blinding_derivation_key);
     }
 
     return result;

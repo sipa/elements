@@ -110,7 +110,7 @@ Value getnewaddress(const Array& params, bool fHelp)
 
     pwalletMain->SetAddressBook(keyID, strAccount, "receive");
 
-    return CBitcoinAddress(keyID).AddBlindingKey(pwalletMain->blinding_pubkey).ToString();
+    return CBitcoinAddress(keyID).AddBlindingKey(pwalletMain->GetBlindingPubKey(GetScriptForDestination(CTxDestination(keyID)))).ToString();
 }
 
 
@@ -148,7 +148,7 @@ CBitcoinAddress GetAccountAddress(string strAccount, bool bForceNew=false)
         walletdb.WriteAccount(strAccount, account);
     }
 
-    return CBitcoinAddress(account.vchPubKey.GetID()).AddBlindingKey(pwalletMain->blinding_pubkey);
+    return CBitcoinAddress(account.vchPubKey.GetID()).AddBlindingKey(pwalletMain->GetBlindingPubKey(GetScriptForDestination(account.vchPubKey.GetID())));
 }
 
 Value getaccountaddress(const Array& params, bool fHelp)
@@ -205,7 +205,7 @@ Value getrawchangeaddress(const Array& params, bool fHelp)
 
     CKeyID keyID = vchPubKey.GetID();
 
-    return CBitcoinAddress(keyID).AddBlindingKey(pwalletMain->blinding_pubkey).ToString();
+    return CBitcoinAddress(keyID).AddBlindingKey(pwalletMain->GetBlindingPubKey(GetScriptForDestination(CTxDestination(keyID)))).ToString();
 }
 
 
@@ -426,7 +426,7 @@ Value listaddressgroupings(const Array& params, bool fHelp)
         {
             Array addressInfo;
             CBitcoinAddress addr(address);
-            addr.AddBlindingKey(pwalletMain->blinding_pubkey);
+            addr.AddBlindingKey(pwalletMain->GetBlindingPubKey(GetScriptForDestination(addr.Get())));
             addressInfo.push_back(addr.ToString());
             addressInfo.push_back(ValueFromAmount(balances[address]));
             {
@@ -521,7 +521,7 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
     CScript scriptPubKey = GetScriptForDestination(address.Get());
     if (!IsMine(*pwalletMain,scriptPubKey))
         return (double)0.0;
-    if (address.IsBlinded() && address.GetBlindingKey() != pwalletMain->blinding_pubkey)
+    if (address.IsBlinded() && address.GetBlindingKey() != pwalletMain->GetBlindingPubKey(scriptPubKey))
         return (double)0.0;
 
     // Minimum confirmations

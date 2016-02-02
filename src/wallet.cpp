@@ -8,6 +8,7 @@
 #include "base58.h"
 #include "checkpoints.h"
 #include "coincontrol.h"
+#include "crypto/hmac_sha256.h"
 #include "net.h"
 #include "script/script.h"
 #include "script/sign.h"
@@ -895,7 +896,7 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
         COutputEntry output = {address, GetValueOut(i), (int)i, CPubKey()};
 
         if (!txout.nValue.IsAmount() && GetValueOut(i) > 0) {
-            output.confidentiality_pubkey = pwallet->blinding_pubkey;
+            output.confidentiality_pubkey = pwallet->GetBlindingPubKey(txout.scriptPubKey);
         }
 
         // If we are debited by the transaction, add the output as a "sent" entry
@@ -1614,7 +1615,7 @@ bool CWallet::CreateTransaction(const vector<CSend>& vecSend, const vector<CTxIn
                         int pos = GetRandInt(txNew.vout.size()+1);
                         vector<CTxOut>::iterator position = txNew.vout.begin()+pos;
                         txNew.vout.insert(position, newTxOut);
-                        output_pubkeys.insert(output_pubkeys.begin() + pos, blinding_pubkey);
+                        output_pubkeys.insert(output_pubkeys.begin() + pos, GetBlindingPubKey(scriptChange));
                         nValueOut += nChange;
                         fBlindedOuts = true;
                     }
@@ -1625,7 +1626,7 @@ bool CWallet::CreateTransaction(const vector<CSend>& vecSend, const vector<CTxIn
                 if (fBlindedIns && !fBlindedOuts) {
                     CTxOut newTxOut(0, CScript() << OP_RETURN);
                     txNew.vout.push_back(newTxOut);
-                    output_pubkeys.push_back(blinding_pubkey);
+                    output_pubkeys.push_back(GetBlindingPubKey(newTxOut.scriptPubKey));
                     fBlindedOuts = true;
                 }
                 // Fill vin
@@ -2528,3 +2529,29 @@ bool CMerkleTx::AcceptToMemoryPool(bool fLimitFree, bool fRejectInsaneFee)
     return ::AcceptToMemoryPool(mempool, state, *this, fLimitFree, NULL, fRejectInsaneFee);
 }
 
+CKey CWallet::GetBlindingKey(const CScript* script) const
+{
+    if (script != NULL && blinding_derivation_key.IsValid()) {
+        unsigned char vch[32];
+        CHMAC_SHA256(blinding_derivation_key.begin(), blinding_derivation_key.size()).Write(&((*script)[0]), script->size()).Finalize(vch);
+        CKey key;
+        key.Set(&vch[0], &vch[32], true);
+        return key;
+    }
+
+    if (script == NULL && blinding_key.IsValid()) {
+        return blinding_key;
+    }
+
+    return CKey();
+}
+
+CPubKey CWallet::GetBlindingPubKey(const CScript& script) const
+{
+    CKey key = GetBlindingKey(&script);
+    if (key.IsValid()) {
+        return key.GetPubKey();
+    }
+
+    return CPubKey();
+}
